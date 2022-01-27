@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"go_jwt/controllers"
+	middlewares "go_jwt/middleware"
 	"go_jwt/models"
 )
 
@@ -10,20 +11,12 @@ func main() {
 	Router := gin.Default()
 	models.InitialMigration()
 
-	Router.POST("/sign-up", controllers.SignUp)
-	Router.POST("/sign-in", controllers.SignIn)
+	Router.POST("/register", controllers.Register)
+	Router.POST("/login", controllers.Login)
 
-	authorized := Router.Group("/")
-	authorized.Use(AuthRequired())
-	{
-		authorized.POST("/login", loginEndpoint)
-		authorized.POST("/submit", submitEndpoint)
-		authorized.POST("/read", readEndpoint)
-
-		// nested group
-		testing := authorized.Group("testing")
-		testing.GET("/analytics", analyticsEndpoint)
-	}
+	protected := Router.Group("/private")
+	protected.Use(middlewares.JwtAuthMiddleware())
+	protected.GET("/me", controllers.CurrentUser)
 
 	Router.Run(":8000")
 }

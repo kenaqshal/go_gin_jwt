@@ -3,11 +3,15 @@ package helper
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
+	"strings"
 	"time"
 )
 
+var mySigningKey = []byte("jwt_go")
+
 func GenerateJWT(email, role string) (string, error) {
-	var mySigningKey = []byte("jwt_go")
+
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 
@@ -22,16 +26,64 @@ func GenerateJWT(email, role string) (string, error) {
 		fmt.Errorf("Something Went Wrong: %s", err.Error())
 		return "", err
 	}
+
 	return tokenString, nil
 }
 
-//func (service *jwtServices) ValidateToken(encodedToken string) (*jwt.Token, error) {
-//	return jwt.Parse(encodedToken, func(token *jwt.Token) (interface{}, error) {
-//		if _, isvalid := token.Method.(*jwt.SigningMethodHMAC); !isvalid {
-//			return nil, fmt.Errorf("Invalid token", token.Header["alg"])
-//
-//		}
-//		return []byte(service.secretKey), nil
-//	})
-//
-//}
+func TokenValid(c *gin.Context) error {
+	token := ExtractToken(c)
+
+	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return mySigningKey, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ExtractToken(c *gin.Context) string {
+	token := c.Query("token")
+
+	if token != "" {
+		return token
+	}
+
+	bearerToken := c.Request.Header.Get("Authorization")
+
+	if len(strings.Split(bearerToken, " ")) == 2 {
+		return strings.Split(bearerToken, " ")[1]
+	}
+
+	return ""
+}
+
+func ExtractTokenID(c *gin.Context) (interface{}, error) {
+
+	tokenString := ExtractToken(c)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte("jwt_go"), nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if ok && token.Valid {
+		username := claims["email"]
+		return username, nil
+	}
+
+	return "", nil
+}

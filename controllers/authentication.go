@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func SignIn(c *gin.Context) {
+func Login(c *gin.Context) {
 	connection := models.GetDatabase()
 	defer models.Closedatabase(connection)
 
@@ -49,7 +49,7 @@ func SignIn(c *gin.Context) {
 
 }
 
-func SignUp(c *gin.Context) {
+func Register(c *gin.Context) {
 	connection := models.GetDatabase()
 	defer models.Closedatabase(connection)
 
